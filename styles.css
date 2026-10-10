@@ -1,0 +1,367 @@
+:root{--bg:#f4f5f7;--card:#fff;--ink:#1d2330;--muted:#7a8291;--line:#e3e6ea;--pri:#1f6feb;--green:#1a9e5a;--red:#d64545;--amber:#e09b1a;--a:#e8f5ee;--b:#fdecec}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px;color:var(--ink)}
+button:disabled{opacity:.35;cursor:default}
+input,select{font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;width:100%;background:#fff;color:var(--ink)}
+a{color:var(--pri);cursor:pointer;text-decoration:underline}
+
+.topbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;padding:10px 12px;background:#1d2330;color:#fff}
+.topbar .title{flex:1;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar .back{background:none;border:none;color:#fff;font-size:24px;padding:0 6px;line-height:1}
+.sync{font-size:12px;padding:3px 8px;border-radius:99px;white-space:nowrap}
+.sync.ok{background:#2c3a52;color:#9fd4b5}.sync.warn{background:var(--amber);color:#fff}
+
+.page{padding:12px 12px 110px;max-width:720px;margin:0 auto}
+.sec{margin:16px 0 8px;font-weight:700;font-size:14px;color:#3b4252}
+.sec small{font-weight:400;color:var(--muted)}
+.muted{color:var(--muted)}.small{font-size:12px}
+.btn{display:block;width:100%;margin:10px 0}
+.btn.primary{background:var(--pri);color:#fff;border-color:var(--pri);font-weight:700}
+.btn.big{padding:14px;font-size:17px}
+.btn.ghost{background:transparent;border-style:dashed}
+.btn.sm{display:inline-block;width:auto;margin:0;padding:6px 12px;font-size:13px}
+
+.form label{display:block;margin-bottom:10px;font-size:13px;color:var(--muted)}
+.form label input{margin-top:4px}
+.row2{display:flex;align-items:center;justify-content:space-between;margin:10px 0}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:none;border-radius:0;padding:8px 16px}
+.seg button.on{background:var(--pri);color:#fff}
+
+.lrow{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.slot{width:26px;height:26px;flex:none;border-radius:50%;background:#1d2330;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.pick{flex:1;text-align:left;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick.pos{flex:0 0 92px;text-align:center}
+.pick.empty{color:var(--muted);border-style:dashed}
+.num{width:42px;flex:none;font-size:13px;color:var(--muted);text-align:center}
+.x{padding:8px 10px;color:var(--muted)}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:6px 10px;border-radius:99px;background:#fff;border:1px solid var(--line);font-size:14px}
+.chip b{margin-left:6px;color:var(--muted);cursor:pointer}
+.chip.add{border-style:dashed;color:var(--pri)}
+.chip.sel{background:var(--red);color:#fff;border-color:var(--red)}
+.errbox{color:var(--red);font-size:13px;margin:8px 0}
+
+.gitem{display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid var(--line);cursor:pointer}
+.gt{font-weight:700}.gs{font-size:13px;color:var(--muted)}.gr{text-align:right}.gscore{font-weight:700;font-size:18px}
+.tag{font-size:11px;padding:2px 8px;border-radius:99px}.tag.live{background:#fff3d6;color:#9a6a00}.tag.done{background:#e6e9ee;color:#555}
+
+.board{background:#1d2330;color:#fff;padding:2px 10px 8px;display:flex;align-items:center;gap:10px;white-space:nowrap}
+.board .inn{font-size:18px;font-weight:800}
+.outs{display:flex}
+.outs i{display:inline-block;width:11px;height:11px;border-radius:50%;border:2px solid #fff;margin-right:3px}
+.outs i.on{background:var(--red);border-color:var(--red)}
+.board .sc{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:12px;min-width:0}
+.board .sc .tm{max-width:64px;overflow:hidden;text-overflow:ellipsis}
+.board .sc b{font-size:20px}
+.board .side{font-size:12px;padding:2px 7px;border-radius:6px}
+.side.off{background:var(--green)}.side.def{background:var(--pri)}
+.stickyhead{position:sticky;top:0;z-index:5;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.stickyhead .topbar{position:static;padding:6px 10px}
+
+/* 比賽紀錄頁：壓縮高度，一頁內操作完畢 */
+.page.game{padding:6px 10px 84px}
+.page.game .sec{margin:8px 0 4px;font-size:13px;display:flex;align-items:center;gap:8px}
+.page.game .sec small{font-size:12px}
+.page.game .sec .pv{margin-left:auto;color:#3b4252}
+.page.game .sec .chk{margin:0 0 0 auto;font-weight:400;font-size:13px}
+.page.game .card{margin-top:4px;padding:8px 10px}
+.page.game .bname{font-size:19px;margin:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.page.game .bslot{font-size:12px;background:#1d2330;color:#fff;padding:1px 6px;border-radius:5px;font-weight:700}
+.page.game .bnum{font-size:15px}
+.page.game .bpos{font-size:12px;padding:1px 6px}
+.page.game .binfo{min-width:0}
+.page.game .jrow{margin:0;font-size:16px;gap:2px}
+.page.game .jin{width:84px;padding:4px 8px;font-size:17px}
+.page.game .rchip{min-width:72px;padding:3px 8px;font-size:14px}
+.page.game .rbtn{padding:10px 2px;font-size:13.5px}
+.page.game .nbtn{padding:8px;font-size:16px}
+.page.game .grid,.page.game .grid5{gap:5px}
+.footer button{padding:11px 4px}
+.tools{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.tools button{padding:6px 12px;font-size:13px}
+.tools.bottom{margin-top:28px;padding-top:14px;border-top:1px dashed var(--line)}
+.tools.bottom button{flex:1;padding:10px 6px}
+.ojgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 12px}
+.ojrow{display:flex;align-items:center;gap:8px}
+.ojrow .jin{width:100%}
+
+.card{background:#fff;border-radius:12px;padding:12px;border:1px solid var(--line);margin-top:10px}
+.card.batter{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.bslot{font-size:13px;color:var(--muted)}
+.bname{font-size:22px;font-weight:800;margin:2px 0}
+.bnum{font-size:16px;color:var(--pri)}
+.bpos{font-size:13px;background:#eef1f5;padding:2px 8px;border-radius:6px;font-weight:400}
+
+.runners{display:flex;flex-wrap:wrap;gap:6px}
+.rchip{display:flex;flex-direction:column;align-items:center;min-width:84px;padding:6px 10px;border-width:2px}
+.rchip small{font-size:11px;color:var(--muted)}
+.rchip em{font-style:normal;font-size:12px;font-weight:700}
+.rchip.score{border-color:var(--green);background:#e8f5ee}.rchip.score em{color:var(--green)}
+.rchip.out{border-color:var(--red);background:#fdecec}.rchip.out em{color:var(--red)}
+.rchip.batter{border-style:dashed}
+
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.rbtn{padding:12px 4px;font-size:14px;font-weight:600}
+.rbtn.a{background:var(--a)}.rbtn.b{background:var(--b)}
+.rbtn.sel,.nbtn.sel{background:var(--pri);color:#fff;border-color:var(--pri)}
+.nbtn{padding:12px;font-size:17px;font-weight:700}
+.preview{margin-top:10px;font-size:14px;color:#3b4252}
+.chk{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:14px}
+.chk input{width:auto}
+.jrow{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:14px}
+.jin{width:110px;font-size:18px;font-weight:700}
+
+.footer{position:fixed;left:0;right:0;bottom:0;display:flex;gap:6px;padding:6px 10px calc(6px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--line);z-index:6}
+.footer button{flex:1;font-weight:700;white-space:nowrap;font-size:14px;padding-left:2px;padding-right:2px}
+.footer .save{flex:1.6;background:var(--pri);color:#fff;border-color:var(--pri)}
+
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:#fff;width:100%;max-width:560px;max-height:86vh;display:flex;flex-direction:column;border-radius:16px 16px 0 0}
+.mtitle{padding:14px 16px;font-weight:800;border-bottom:1px solid var(--line)}
+.mbody{padding:12px 16px;overflow:auto}
+.mbtns{display:flex;gap:8px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);flex-wrap:wrap}
+.mbtns button{flex:1;font-weight:700}
+.mbtns .primary{background:var(--pri);color:#fff;border-color:var(--pri)}
+.red{color:var(--red)}.green{color:var(--green)}
+.pgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pbtn{display:flex;flex-direction:column;align-items:center;padding:10px 4px}
+.pbtn small{color:var(--amber);font-size:11px}
+.rerow,.drow{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.rerow>div:first-child,.dname{flex:1}
+.rebtns{display:flex;gap:4px}.rebtns button{padding:6px 10px}
+.drow select{width:100px;padding:6px}
+.dname.chg{color:var(--pri);font-weight:700}
+.notice{background:#fff3d6;padding:8px 10px;border-radius:8px;font-size:13px;margin-bottom:8px}
+
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1d2330;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:30;max-width:90vw}
+#toast.show{opacity:1}
+.loading,.err{padding:40px;text-align:center;color:var(--muted)}
+.ended{text-align:center;padding:30px 10px}
+
+.tblwrap{overflow-x:auto;background:#fff;border-radius:10px;border:1px solid var(--line)}
+.tbl{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}
+.tbl th,.tbl td{border:1px solid var(--line);padding:5px 6px;text-align:center}
+.tbl th{background:#f0f2f5}
+.tbl .tn,.tbl .nm{text-align:left}
+.tbl tr.total td{font-weight:700;background:#fafbfc}
+.tbl tr.sub td{color:#556}
+.boxhead{margin:4px 0 8px}
+.boxhead .bh1{font-weight:800;font-size:17px}
+
+.erow{display:flex;gap:8px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:6px;font-size:14px}
+.erow.warn{border-color:var(--red);background:#fff6f6}
+.emain{flex:1}
+.eno{display:inline-block;min-width:24px;color:var(--muted);font-size:12px}
+.elabel{font-size:12px;background:#eef1f5;padding:1px 6px;border-radius:5px;margin-right:4px}
+.ewarn{color:var(--red);font-size:12px;margin-top:2px}
+.ebtns{display:flex;gap:4px}.ebtns button{padding:5px 8px;font-size:12px}
+
+
+/* 年度成績 */
+/* 首頁 */
+.home{min-height:100vh;background-color:var(--bg);background-size:cover;background-position:center;background-attachment:fixed}
+.home.hasbg{position:relative}
+.home.hasbg::before{content:"";position:fixed;inset:0;background:rgba(15,20,30,.35);pointer-events:none}
+.home.hasbg>*{position:relative}
+.hometop{justify-content:center;padding:15px 18px}
+.hometop .title{flex:none;text-align:center;font-size:22.5px;letter-spacing:2px}
+.home.hasbg .hometop{background:rgba(29,35,48,.85);backdrop-filter:blur(4px)}
+.homegrid{display:grid;grid-template-columns:repeat(2,1fr);grid-auto-rows:1fr;gap:10px;margin:4px 0 6px}
+.hbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:86px;padding:10px 6px;font-weight:700;font-size:15px;border-radius:14px;background:rgba(255,255,255,.95);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.hbtn .hic{font-size:24px;line-height:1}
+.hbtn small{font-size:11px;font-weight:400;color:var(--muted)}
+.hbtn.main{background:var(--pri);color:#fff;border-color:var(--pri)}
+.hbtn.soon{color:var(--muted)}
+.home.hasbg .sec{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.home.hasbg .gitem{background:rgba(255,255,255,.94)}
+.home.hasbg .nogame{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.tag.imp{background:#e3f4ea;color:#17784a}
+.imppanel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:6px 0 10px}
+.impdec{font-size:13px;margin-bottom:8px}
+.impact{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.impact .btn{margin:0}
+.btn.sm.primary{background:var(--pri);color:#fff;border-color:var(--pri)}
+.ysel{margin-bottom:8px;font-weight:700}
+.tabs button{padding:7px 18px}
+.minpa{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.minpa input{width:64px;padding:6px}
+.tbl.stat td,.tbl.stat th{padding:6px 7px}
+.tbl.stat tr{cursor:pointer}
+.tbl .stick{position:sticky;left:0;background:#fff;z-index:1;box-shadow:1px 0 0 var(--line)}
+.tbl th.stick{background:#f0f2f5}
+.tbl th.sortable{cursor:pointer;user-select:none}
+.tbl th.sorted{background:#dfe8fb;color:var(--pri)}
+.tbl tr.click{cursor:pointer}
+.tbl tr.click:hover td{background:#f5f8ff}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center}
+.kpi b{display:block;font-size:20px}
+.kpi span{font-size:12px;color:var(--muted)}
+.oprow{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer}
+.oprow .small{margin-top:2px}
+.opgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.opgrid label{font-size:12px;color:var(--muted)}
+.opgrid input{margin-top:3px;padding:8px;font-size:16px}
+
+
+/* =========================================================
+ * 橫式手機 / 平板 / 電腦：寬度夠時改成兩欄
+ * ========================================================= */
+
+/* 手動輸入資料 */
+.tag.manual{background:#efe7fb;color:#6b3fb3}
+.btn.red{color:var(--red)}
+.mhead{display:none}
+.mrow{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:6px}
+.mname{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.mname .x{padding:4px 8px}
+.mfields{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.mfields label{display:flex;flex-direction:column;font-size:11px;color:var(--muted)}
+.mfields input,.mfields select{padding:7px 6px;font-size:16px;text-align:center;margin-top:2px}
+
+
+/* 盃賽成績 / 刪除 */
+.tag.place{background:#fff4d1;color:#8a6100;font-weight:700}
+.plpanel{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:14px}
+.plpanel .seg button{padding:6px 12px;font-size:13px}
+.delgame{margin-top:28px;border-color:#f1c4c4}
+.mbtns .dangerbtn{background:var(--red);border-color:var(--red)}
+
+/* 球隊年度成績 */
+.teamhead .topbar .title{flex:1}
+.tysel{width:auto;max-width:56%;padding:5px 8px;font-size:13px;background:#2c3a52;color:#fff;border-color:#3a4a66}
+.tsum{background:#25304a;color:#fff;padding:8px 14px 10px}
+.trec{font-size:15px;display:flex;align-items:baseline;gap:3px;flex-wrap:wrap}
+.trec .tname{font-weight:800;margin-right:8px;font-size:16px}
+.trec b{font-size:26px;margin:0 2px 0 6px;color:#ffd166}
+.tpl{display:flex;gap:14px;font-size:13px;margin-top:4px;color:#d6dbe6;flex-wrap:wrap}
+.tpl b{color:#fff;font-size:15px}
+.tcard{background:#fff;border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.tcard.open{border-color:#b9c9ee;box-shadow:0 2px 8px rgba(31,111,235,.08)}
+.thead{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px 6px;cursor:pointer}
+.tinfo{font-size:14px;min-width:0}
+.tinfo b{font-size:15px;margin-right:4px}
+.tbadges{display:flex;align-items:center;gap:6px;flex:none}
+.res{display:inline-block;min-width:26px;text-align:center;padding:2px 8px;border-radius:6px;font-weight:800;color:#fff;font-size:13px}
+.res.win{background:var(--green)}.res.loss{background:var(--red)}.res.tie{background:#8a93a3}
+.chev{color:var(--muted);font-size:11px}
+.lwrap{border:none;border-radius:0;cursor:pointer;padding:0 12px 10px}
+.tbl.lscore{font-size:13px}
+.tbl.lscore th,.tbl.lscore td{padding:4px 5px}
+.tbl.lscore .tn{max-width:110px;overflow:hidden;text-overflow:ellipsis}
+.tbl .rh{border-left:2px solid #c8ced8}
+.tdetail{padding:0 12px 12px;border-top:1px dashed var(--line)}
+.tdetail .btn.sm{margin-top:10px}
+
+/* 補登比分輸入 */
+.tbl.lsin td{padding:3px}
+.tbl.lsin input{padding:6px 2px;text-align:center;font-size:16px;min-width:38px}
+.tbl.lsin input.tot{font-weight:800;min-width:48px}
+
+
+/* 總成績 */
+.tpct{margin-left:12px;font-size:13px;color:#d6dbe6}
+.thist{font-size:12px;color:#b8c1d4;margin-top:4px}
+.tag.hist{background:#e7eefc;color:#2a55a8}
+.tbl.ttbl td,.tbl.ttbl th{padding:8px 6px;font-size:14px}
+.careernote{margin-bottom:8px}
+
+
+/* 首頁：進行中 / 即將到來 */
+.livecard{display:flex;justify-content:space-between;align-items:center;background:#fff;border:2px solid #f3b4b4;border-radius:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.lvtop{font-size:11px;font-weight:800;color:var(--red);letter-spacing:1px;display:flex;align-items:center;gap:4px;margin-bottom:2px}
+.lvdot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:lvblink 1.2s infinite}
+@keyframes lvblink{50%{opacity:.25}}
+.upitem{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.upitem.sch{cursor:default}
+.update{flex:none;width:52px;text-align:center;background:#eef3fd;border-radius:8px;padding:5px 0;line-height:1.2}
+.update b{display:block;font-size:16px;color:var(--pri)}
+.update small{font-size:11px;color:var(--muted)}
+.upmain{flex:1;min-width:0}
+.upmain .gs{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.uptime{flex:none;font-weight:800;font-size:16px}
+.schbtns{display:flex;flex-direction:column;gap:4px}
+.home.hasbg .livecard,.home.hasbg .upitem{background:rgba(255,255,255,.94)}
+/* 即時比賽 */
+.lvref{background:#2c3a52;color:#fff;border-color:#3a4a66;font-size:16px;padding:4px 10px}
+.lvnow{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:15px}
+.lvnow .bslot{font-size:12px;background:#1d2330;color:#fff;padding:1px 6px;border-radius:5px;font-weight:700;margin-right:4px}
+.lvnow .small{margin-top:4px;color:#3b4252}
+.lvnow.over{text-align:center;font-weight:800;background:#e8f5ee;border-color:#bfe3cf}
+.lvlog{background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px 10px;font-size:14px}
+.lvlog>div{padding:5px 0;border-bottom:1px solid #f0f2f5}
+.lvlog>div:last-child{border-bottom:none}
+.lvfoot{text-align:center;margin-top:12px}
+
+@media (orientation: landscape) and (min-width: 600px), (min-width: 900px) {
+  .page{max-width:1100px}
+  .page.game{max-width:1100px}
+
+  /* 標題列與狀態欄併成一列，省下高度 */
+  .stickyhead{display:flex;align-items:stretch;background:#1d2330}
+  .stickyhead .topbar{flex:0 1 auto;min-width:0;max-width:40%}
+  .stickyhead .board{flex:1;padding:6px 12px}
+
+  /* 記錄面板：左欄打者/跑者/打點，右欄結果按鈕 */
+  .gpanel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);column-gap:16px;align-items:start}
+  .gpanel.off{grid-template-areas:"bat a" "run a" "rbi b"}
+  .gpanel.def{grid-template-areas:"bat res" "runs res" "err res"}
+  .g-bat{grid-area:bat}.g-run{grid-area:run}.g-a{grid-area:a}.g-b{grid-area:b}.g-rbi{grid-area:rbi}
+  .g-res{grid-area:res}.g-runs{grid-area:runs}.g-err{grid-area:err}
+  .gpanel .g-bat{margin-top:8px}
+
+  .footer{justify-content:flex-end}
+  .footer button{flex:0 1 160px}
+  .footer .save{flex:0 1 260px}
+
+  /* 其他頁面 */
+  .lgrid{display:grid;grid-template-columns:1fr 1fr;column-gap:16px}
+  .ojgrid{grid-template-columns:repeat(4,1fr)}
+  .oplist{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:0 8px}
+  .kpis{grid-template-columns:repeat(6,1fr)}
+  .home .page{max-width:720px}
+  .backdrop{align-items:center}
+  .modal{border-radius:16px;max-height:92vh}
+  .opgrid{grid-template-columns:repeat(5,1fr)}
+
+  /* 手動輸入：排成跟紙本一樣的表格 */
+  .mform{display:grid;grid-template-columns:200px 1fr 1fr;gap:0 12px}
+  .mhead{display:grid;grid-template-columns:170px 1fr;gap:8px;padding:0 10px;font-size:11px;color:var(--muted);text-align:center}
+  .mhead .mfields span{line-height:1.2;align-self:end}
+  .mrow{display:grid;grid-template-columns:170px 1fr;gap:8px;align-items:center;padding:4px 10px;margin-bottom:4px}
+  .mname{margin:0}
+  .mfields.bat{grid-template-columns:repeat(16,minmax(0,1fr));gap:4px}
+  .mfields.pit{grid-template-columns:1.3fr repeat(6,minmax(0,1fr)) 1fr;gap:4px;max-width:760px}
+  .mrow .mfields label span{display:none}
+  .mrow .mfields input,.mrow .mfields select{margin:0;padding:6px 2px}
+}
+
+/* 橫式手機高度很矮：再壓縮一點 */
+@media (orientation: landscape) and (max-height: 500px) {
+  .stickyhead .topbar{padding:4px 8px}
+  .stickyhead .board{padding:4px 10px}
+  .board .inn{font-size:16px}
+  .board .sc b{font-size:18px}
+  .page.game{padding:2px 12px 60px}
+  .page.game .sec{margin:5px 0 3px}
+  .page.game .card{padding:6px 10px}
+  .page.game .bname{font-size:17px}
+  .page.game .rbtn{padding:8px 2px}
+  .page.game .nbtn{padding:6px}
+  .page.game .rchip{padding:2px 8px}
+  .footer{padding:4px 10px calc(4px + env(safe-area-inset-bottom))}
+  .footer button{padding:8px 4px}
+  .page{padding-bottom:70px}
+}
+
+@media print{
+  .topbar,.footer,.noprint,.tools,.stickyhead{display:none!important}
+  body{background:#fff}
+  .page{padding:0;max-width:none}
+  .tblwrap{border:none;overflow:visible}
+  .tbl{font-size:10px}
+}

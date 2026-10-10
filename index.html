@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <title>壘球紀錄</title>
+  <meta name="theme-color" content="#1f6feb">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="壘球紀錄">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app"><div class="loading">載入中…</div></div>
+  <div id="modal-root"></div>
+  <div id="toast"></div>
+  <script src="config.js"></script>
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function () { });
+      });
+    }
+  </script>
+</body>
+</html>
