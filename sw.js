@@ -1,7 +1,7 @@
 /* 壘球紀錄 Service Worker：把程式檔存在手機裡，沒網路也能開啟。
  * 策略：先用手機裡的版本立刻開啟，同時在背景檢查新版，下次開啟就會是新版。
  * ★ 每次更新網頁檔案後，請把下面的版本號 +1，舊快取才會被清掉。 */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = 'softball-' + VERSION;
 const SHELL = ['./', 'index.html', 'styles.css', 'engine.js', 'app.js', 'config.js',
   'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png'];
