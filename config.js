@@ -1,2 +1,2 @@
 // 唯一需要手動修改的設定：貼上 Apps Script「網頁應用程式」部署後的網址（結尾是 /exec）
-window.API_URL = 'o1t2rd9lvbugZcTCywQvyHFamgw1rl1nj76W8uxnVB2nSeM1tzjbnsZKw0SwHzXLsTxdeCDnIOU3vUHQept22nI8-B3CTlCqmNcQein2TBDbVST6-cpBKPijlCQkCX9soiuoOqqXYn9z2nOTmswrjFnWecmFU1RnvnjabEGXs4w0DSObdmvCQGi7FMZ-QXrTHOMOSZV4eBn6f9AabHlcJ6f3wx7URmzcNjtJuvt_LVnT5e8cMssUfyJ-9T_xIYlyKX-chC4eSi9w&lib=M-xvp0h8DtcAqhNx5ZLnJczA3Wcg5FMSu';
+window.API_URL = 'https://script.google.com/macros/s/AKfycbz3uQriCw6_-_bzHcfJIMONBAQ43KAqSk79uXwx2EG0ob_2IA97D4YyPAWRgEqoEPPs/exec';
