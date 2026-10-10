@@ -220,10 +220,44 @@ function sortPlayers() {
   App.boot.players.sort((a, b) => (parseInt(a.num, 10) || 999) - (parseInt(b.num, 10) || 999));
   App.bootMap = {}; App.boot.players.forEach(p => App.bootMap[p.pid] = p);
 }
-const applyBoot = d => { App.boot = d; sortPlayers(); };
+/* 手機裡還沒結束的比賽（離線時重新開啟 App，也能找到並繼續記錄） */
+function localLive() {
+  const out = [];
+  lsKeys().forEach(k => {
+    const m = k.match(/^sb_setup_(.+)$/); if (!m) return;
+    const st = lsGet(k, null); if (!st) return;
+    let s; try { s = replay(st, lsGet(evKey(m[1]), [])); } catch (e) { return; }
+    if (s.over) return;
+    out.push({ gameId: m[1], date: st.date, cup: st.cup || '', opp: st.opp, our: totalRuns(s, 'our'), oppScore: totalRuns(s, 'opp'), label: '進行中（' + halfLabel(s) + '）', _local: true, setup: st });
+  });
+  return out;
+}
+function mergeLocalLive() {
+  if (!App.boot) return;
+  const live = (App.boot.live || []).filter(g => !g._local);
+  localLive().forEach(g => { if (!live.some(x => x.gameId === g.gameId)) live.unshift(g); });
+  App.boot.live = live;
+}
+/** 完全連不上伺服器、也沒有首頁暫存時，用手機裡的比賽資料組一個最小的首頁 */
+function offlineBoot() {
+  const lg = localLive(), pl = {};
+  lg.forEach(g => Object.keys(g.setup.players || {}).forEach(pid => { pl[pid] = { pid: pid, name: g.setup.players[pid].name, num: g.setup.players[pid].num }; }));
+  applyBoot({ ourTeam: (lg[0] && lg[0].setup.ourTeam) || '我方', homeTitle: '壘球紀錄（離線）', homeBg: '', players: Object.keys(pl).map(k => pl[k]), live: [], upcoming: [] });
+}
+const applyBoot = d => { App.boot = d; sortPlayers(); mergeLocalLive(); };
+/** 載入首頁資料；手機裡有進行中的比賽時，網路太慢（8 秒）就先用手機裡的資料開啟 */
+async function loadBoot() {
+  const run = swr('boot', 'getBootstrap', [], applyBoot, 'home');
+  if (!localLive().length) return run;
+  run.catch(() => { });
+  let timer;
+  const slow = new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('slow')), 8000); });
+  try { await Promise.race([run, slow]); } finally { clearTimeout(timer); }
+}
 async function boot() {
-  try { await swr('boot', 'getBootstrap', [], applyBoot, 'home'); }
-  catch (e) { $('#app').innerHTML = `<div class="err">載入失敗：${esc(e.message)}</div>`; return; }
+  try { await loadBoot(); }
+  catch (e) { if (!App.boot && localLive().length) offlineBoot(); }
+  if (!App.boot) { $('#app').innerHTML = '<div class="err">載入失敗：網路無法連線，而且手機裡沒有進行中的比賽。</div>'; return; }
   cleanupGames(); trimCache();
   flushAll();
   go('home');
@@ -251,7 +285,9 @@ function render() {
 async function goHome() {
   App.game = null; App.edit = null;
   if (!cacheGet('boot')) $('#app').innerHTML = '<div class="loading">載入中…</div>';
-  try { await swr('boot', 'getBootstrap', [], applyBoot, 'home'); } catch (e) { }
+  try { await loadBoot(); } catch (e) { if (!App.boot && localLive().length) offlineBoot(); }
+  if (!App.boot) { $('#app').innerHTML = '<div class="err">載入失敗：網路無法連線</div>'; return; }
+  mergeLocalLive();
   go('home');
 }
 window.addEventListener('load', boot);
