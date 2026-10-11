@@ -1,6 +1,6 @@
 {
-  "name": "壘球紀錄",
-  "short_name": "壘球紀錄",
+  "name": "鈾興壘球隊",
+  "short_name": "鈾興壘球隊",
   "description": "壘球比賽即時紀錄與年度成績",
   "start_url": "./index.html",
   "scope": "./",
