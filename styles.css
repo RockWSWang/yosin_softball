@@ -365,3 +365,11 @@ a{color:var(--pri);cursor:pointer;text-decoration:underline}
   .tblwrap{border:none;overflow:visible}
   .tbl{font-size:10px}
 }
+
+/* 攻守名單視窗 */
+.lutbl{width:100%;border-collapse:collapse;font-size:15px}
+.lutbl th{font-size:12px;color:var(--muted);font-weight:600;padding:4px 6px;text-align:center}
+.lutbl td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:center}
+.lutbl td.nm,.lutbl th.nm{text-align:left}
+.lutbl tr.cur td{background:#eaf2ff;font-weight:700}
+.lutbl small{color:var(--muted);margin-left:6px;font-weight:400}
