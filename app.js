@@ -376,6 +376,7 @@ function mdw(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number);
   return `${m}/${d}（${WEEK[new Date(y, m - 1, d).getDay()]}）`;
 }
+const APP_VERSION = 'v4';
 function renderHome() {
   const live = App.boot.live || [];
   const up = (App.boot.upcoming || []).filter(x => x.date >= today()).slice(0, 10);
@@ -404,6 +405,7 @@ function renderHome() {
         <div class="upmain"><div class="gt">${esc(x.cup || '未命名賽事')}</div><div class="gs">📍 ${esc(x.venue || '場地未定')}</div></div>
         <div class="uptime">${esc(x.time || '')}</div></div>`).join('')
       : '<p class="muted nogame">目前沒有排定的比賽，可以按「記錄新賽事」新增。</p>'}
+    <p class="muted small" style="text-align:center;margin-top:18px">版本 ${APP_VERSION}</p>
   </div></div>`;
 }
 function liveMenu(id) {
@@ -578,6 +580,15 @@ async function startGame() {
 }
 
 /* ---------------- 載入比賽 ---------------- */
+/** 名單裡沒有的在隊球員（舊比賽、或開賽時忘記填預備名單），補進預備名單，代打、代跑才選得到 */
+function augmentSetup(setup) {
+  setup.players = setup.players || {}; setup.reserves = setup.reserves || [];
+  ((App.boot && App.boot.players) || []).forEach(p => {
+    if (setup.players[p.pid]) return;
+    setup.players[p.pid] = { name: p.name, num: p.num };
+    setup.reserves.push({ pid: p.pid });
+  });
+}
 async function openGame(id) {
   $('#app').innerHTML = '<div class="loading">載入中…</div>';
   let server = null;
@@ -586,6 +597,7 @@ async function openGame(id) {
   const setup = server ? server.setup : localSetup;
   if (!setup) { toast('無法載入比賽'); return go('home'); }
   setup.gameId = id;
+  augmentSetup(setup);
   if (server && server.device && server.device !== deviceId()) {
     const over = replay(server.setup, server.events).over;
     if (!over && !(await askClaim(id))) return;
@@ -685,7 +697,7 @@ function offensePanel(s, setup) {
   const pv = previewOffense(s, u);
   return `<div class="gpanel off"><div class="g-bat card batter"><div class="binfo">
       <div class="bname"><span class="bslot">${slot + 1}棒</span>${esc(P(cur.pid).name)} <span class="bnum">#${esc(P(cur.pid).num)}</span> <span class="bpos">${esc(POS_ZH[cur.pos] || '')}</span></div>
-      <div class="muted small">下三棒：${['先', '中', '後'].map((z, k) => esc(P(s.slots[(slot + 1 + k) % N].pid).name) + '(' + z + ')').join('、')}</div>
+      <div class="muted small">下三棒：${[1, 2, 3].map(k => esc(P(s.slots[(slot + k) % N].pid).name)).join('、')}</div>
     </div>${App.edit ? '' : '<button class="btn sm" onclick="doPH()">代打</button>'}</div>
     <div class="g-run"><div class="sec">壘上跑者 <small>點擊切換 留壘／得分／出局</small></div>
     <div class="runners">${chips || '<span class="muted small">壘上無人</span>'}</div></div>
