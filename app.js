@@ -452,7 +452,7 @@ function renderSetup() {
       <button class="pick pos ${l.pos ? '' : 'empty'}" onclick="pickPos(${i})">${l.pos ? esc(POS_ZH[l.pos]) : '守位'}</button>
       <button class="x" onclick="clearRow(${i})">✕</button></div>`).join('')}</div>
 
-    <div class="sec">預備名單</div>
+    <div class="sec">預備名單 <small>（沒選的在隊球員，開賽時會自動列為預備）</small></div>
     <div class="chips">
       ${d.reserves.map(pid => `<span class="chip"><b style="margin:0;color:var(--pri)">#${esc(P(pid).num)}</b> ${esc(P(pid).name)} <b onclick="removeReserve(${J(pid)})">✕</b></span>`).join('')}
       <button class="chip add" onclick="pickReserve()">＋ 預備</button>
@@ -551,13 +551,16 @@ async function startGame() {
   const oppJerseys = {};
   range(d.oppCount).forEach(i => { if (d.oppJerseys[i]) oppJerseys[i] = d.oppJerseys[i]; });
 
+  // 未先發、也沒手動加入預備的在隊球員，自動列為預備（避免忘記填預備名單時，換代打沒有人可選）
+  const reserveIds = d.reserves.slice(), inLineup = new Set(lineup.map(l => l.pid));
+  App.boot.players.forEach(p => { if (!inLineup.has(p.pid) && !reserveIds.includes(p.pid)) reserveIds.push(p.pid); });
   const players = {};
-  [...lineup.map(l => l.pid), ...d.reserves].forEach(pid => players[pid] = { name: P(pid).name, num: P(pid).num });
+  [...lineup.map(l => l.pid), ...reserveIds].forEach(pid => players[pid] = { name: P(pid).name, num: P(pid).num });
   const setup = {
     date: d.date, cup: d.cup.trim(), venue: d.venue || '', opp: d.opp.trim(), ourTeam: App.boot.ourTeam,
     weBatFirst: d.weBatFirst, oppCount: d.oppCount, oppJerseys, innings: 7,
     lineup: lineup.map(l => ({ pid: l.pid, pos: l.pos })),
-    reserves: d.reserves.map(pid => ({ pid })), players
+    reserves: reserveIds.map(pid => ({ pid })), players
   };
   const btn = $('#startBtn'); btn.disabled = true; btn.textContent = '建立中…';
   try {
@@ -636,7 +639,7 @@ function renderGame() {
       <button class="btn" onclick="go('edit')">修正紀錄</button></div></div>`;
   }
   html += off ? offensePanel(s, setup) : defensePanel(s, setup);
-  if (!ed) html += `<div class="tools bottom"><button onclick="go('box')">紀錄表</button><button onclick="go('edit')">事件列表</button><button class="red" onclick="endGame()">結束比賽</button></div>`;
+  if (!ed) html += `<div class="tools bottom">${off ? '<button onclick="showLineup()">看攻守名單</button>' : ''}<button onclick="go('box')">紀錄表</button><button onclick="go('edit')">事件列表</button><button class="red" onclick="endGame()">結束比賽</button></div>`;
   html += '</div>';
 
   if (ed) html += `<div class="footer"><button onclick="cancelEdit()">取消</button><button class="save" onclick="${off ? 'saveOffense' : 'saveDefense'}()">儲存修正</button></div>`;
@@ -646,6 +649,21 @@ function renderGame() {
 }
 
 /* ----- 進攻 ----- */
+/** 我方目前的攻守名單：代打、代跑、代守發生後，以最後上場的人為準 */
+function showLineup() {
+  const s = App.state, TAG = { '代打': '代打', '代跑': '代跑', '守備': '代守' };
+  const rows = s.slots.map((x, i) => {
+    const h = s.hist[i], last = h[h.length - 1], tag = TAG[last.role] || '';
+    return `<tr class=\"${i === s.batIdx ? 'cur' : ''}\"><td>${i + 1}</td><td>${esc(POS_ZH[x.pos] || '')}</td>
+      <td class=\"nm\">${esc(P(x.pid).name)}${tag ? `<small>${tag}</small>` : ''}</td><td>#${esc(P(x.pid).num)}</td></tr>`;
+  }).join('');
+  openModal({
+    title: '我方攻守名單',
+    body: `<table class=\"lutbl\"><tr><th>棒</th><th>守位</th><th class=\"nm\">姓名</th><th>背號</th></tr>${rows}</table>
+      <p class=\"small muted\">底色為目前打者；代打、代跑後守位暫沿用原球員，守備調整後才會更新。</p>`,
+    buttons: [{ label: '關閉', cls: 'primary' }]
+  });
+}
 function previewOffense(s, u) {
   if (u.result === 'HR') return { runs: s.queue.length + 1, outs: 0 };
   let runs = 0, outs = 0;
@@ -655,7 +673,7 @@ function previewOffense(s, u) {
   return { runs, outs };
 }
 function offensePanel(s, setup) {
-  const u = App.ui, N = s.slots.length, slot = s.batIdx, cur = s.slots[slot], nxt = s.slots[(slot + 1) % N];
+  const u = App.ui, N = s.slots.length, slot = s.batIdx, cur = s.slots[slot];
   const r = u.result ? OUR_RES[u.result] : null;
   const showBatter = r && !r.out && u.result !== 'HR';
   const bCls = { safe: '', scored: 'score', out: 'out' }[u.batter];
@@ -663,15 +681,15 @@ function offensePanel(s, setup) {
     const st = u.marks[q.pid] || 'stay';
     return `<button class="rchip ${st}" onclick="cycleMark(${J(q.pid)})"><small>第${q.slot + 1}棒</small>${esc(P(q.pid).name)}<em>${MARK_ZH[st]}</em></button>`;
   }).join('') + (showBatter ? `<button class="rchip batter ${bCls}" onclick="cycleBatter()"><small>打者</small>${esc(P(cur.pid).name)}<em>${BATTER_ZH[u.batter]}</em></button>` : '');
-  const btn = code => `<button class="rbtn ${OUR_RES[code].area} ${u.result === code ? 'sel' : ''}" onclick="setResult('${code}')">${OUR_RES[code].zh}</button>`;
+  const btn = code => `<button class="rbtn ${code === 'SF' ? 'b' : OUR_RES[code].area} ${u.result === code ? 'sel' : ''}" onclick="setResult('${code}')">${OUR_RES[code].zh}</button>`;
   const pv = previewOffense(s, u);
   return `<div class="gpanel off"><div class="g-bat card batter"><div class="binfo">
       <div class="bname"><span class="bslot">${slot + 1}棒</span>${esc(P(cur.pid).name)} <span class="bnum">#${esc(P(cur.pid).num)}</span> <span class="bpos">${esc(POS_ZH[cur.pos] || '')}</span></div>
-      <div class="muted small">下一棒：${(slot + 1) % N + 1}棒 ${esc(P(nxt.pid).name)}</div>
+      <div class="muted small">下三棒：${['先', '中', '後'].map((z, k) => esc(P(s.slots[(slot + 1 + k) % N].pid).name) + '(' + z + ')').join('、')}</div>
     </div>${App.edit ? '' : '<button class="btn sm" onclick="doPH()">代打</button>'}</div>
     <div class="g-run"><div class="sec">壘上跑者 <small>點擊切換 留壘／得分／出局</small></div>
     <div class="runners">${chips || '<span class="muted small">壘上無人</span>'}</div></div>
-    <div class="g-a"><div class="sec">選手上壘</div><div class="grid">${['1B', '2B', '3B', 'HR', 'BB', 'SF', 'ROE', 'FC'].map(btn).join('')}</div></div>
+    <div class="g-a"><div class="sec">選手上壘</div><div class="grid">${['1B', '2B', '3B', 'HR', 'BB', 'ROE', 'SF', 'FC'].map(btn).join('')}</div></div>
     <div class="g-b"><div class="sec">選手出局</div><div class="grid">${['K', 'AO', 'GO', 'DP'].map(btn).join('')}</div></div>
     <div class="g-rbi"><div class="sec">打點 <small class="pv">本打席：得分 <b>${pv.runs}</b>　出局 <b>+${pv.outs}</b></small></div>
     <div class="grid5">${[0, 1, 2, 3, 4].map(n => `<button class="nbtn ${u.rbi === n ? 'sel' : ''}" onclick="setRbi(${n})">${n}</button>`).join('')}</div></div></div>`;
@@ -1326,7 +1344,7 @@ function renderManualList() {
   </div>`;
 }
 function newManual() {
-  App.me = { gameId: '', date: today(), cup: '', opp: '', bat: [], pit: [], our: '', oppScore: '', placing: '', line: { our: range(7).map(() => ''), opp: range(7).map(() => '') } };
+  App.me = { gameId: '', date: today(), cup: '', opp: '', first: true, bat: [], pit: [], our: '', oppScore: '', placing: '', line: { our: range(7).map(() => ''), opp: range(7).map(() => '') } };
   go('manualEdit');
 }
 async function editManual(id) {
@@ -1335,7 +1353,7 @@ async function editManual(id) {
   let g;
   try { g = await gs('getManual', id); } catch (e) { toast('載入失敗：' + e.message); return goManual(); }
   App.me = {
-    gameId: g.gameId, date: g.date, cup: g.cup, opp: g.opp,
+    gameId: g.gameId, date: g.date, cup: g.cup, opp: g.opp, first: !(g.line && g.line.weBatFirst === false),
     our: g.our === '' ? '' : String(g.our), oppScore: g.oppScore === '' ? '' : String(g.oppScore), placing: g.placing || '',
     line: { our: range(7).map(k => g.line && g.line.our && g.line.our[k] != null ? String(g.line.our[k]) : ''), opp: range(7).map(k => g.line && g.line.opp && g.line.opp[k] != null ? String(g.line.opp[k]) : '') },
     bat: g.bat.map(r => { const o = { pid: r.pid, name: r.name }; MAN_BAT.forEach(([k]) => o[k] = r[k] || ''); return o; }),
@@ -1371,8 +1389,11 @@ function renderManualEdit() {
     <div class="muted small">${seasonOf(m.date) != null ? '計入 ' + seasonLabel(seasonOf(m.date)) : '請選擇日期'}</div>
 
     <div class="sec">比分 <small>填逐局得分會自動加總，總分也可以直接修改</small></div>
+    <div class="row2"><span>我方</span><div class="seg">
+      <button class=\"${m.first ? 'on' : ''}\" onclick=\"App.me.first=true;render()\">先攻</button>
+      <button class=\"${!m.first ? 'on' : ''}\" onclick=\"App.me.first=false;render()\">後攻</button></div></div>
     <div class="tblwrap"><table class="tbl lsin"><tr><th class="tn"></th>${range(7).map(k => `<th>${k + 1}</th>`).join('')}<th>總分</th></tr>
-      ${[['our', App.boot.ourTeam, 'our'], ['opp', m.opp || '對手', 'oppScore']].map(([t, n, tk]) => `<tr><td class="tn">${esc(n)}</td>
+      ${(m.first ? [['our', App.boot.ourTeam, 'our'], ['opp', m.opp || '對手', 'oppScore']] : [['opp', m.opp || '對手', 'oppScore'], ['our', App.boot.ourTeam, 'our']]).map(([t, n, tk]) => `<tr><td class="tn">${esc(n)}</td>
         ${range(7).map(k => `<td><input class="mi" type="number" inputmode="numeric" min="0" value="${esc(m.line[t][k])}" oninput="meLine('${t}',${k},this.value)" onkeydown="meKey(event)"></td>`).join('')}
         <td><input id="mt_${t}" class="mi tot" type="number" inputmode="numeric" min="0" value="${esc(m[tk])}" oninput="App.me.${tk}=this.value" onkeydown="meKey(event)"></td></tr>`).join('')}
     </table></div>
@@ -1460,7 +1481,7 @@ function meSave() {
     const hasLine = line.our.concat(line.opp).some(v => v != null);
     gs('saveManual', { gameId: m.gameId, date: m.date, cup: m.cup.trim(), opp: m.opp.trim(), season,
       our: String(m.our).trim() === '' ? '' : num(m.our), oppScore: String(m.oppScore).trim() === '' ? '' : num(m.oppScore),
-      line: hasLine ? line : null, placing: m.placing }, bat, pit)
+      line: Object.assign(hasLine ? line : { our: [], opp: [] }, { weBatFirst: !!m.first }), placing: m.placing }, bat, pit)
       .then(() => { toast('已儲存並計入年度成績'); goManual(); })
       .catch(e => { if (btn) { btn.disabled = false; btn.textContent = '儲存'; } err('儲存失敗：' + e.message); });
   };
@@ -1565,10 +1586,10 @@ function teamGame(g, backfill) {
   return {
     kind: 'manual', id: g.gameId, date: g.date, cup: g.cup, opp: g.opp, placing: g.placing,
     over: has, our: has ? Number(g.our) : null, oppR: has ? Number(g.oppScore) : null, inn, label: has ? '' : '未填比分',
-    rows: [
+    rows: (line.weBatFirst === false ? (a, b) => [b, a] : (a, b) => [a, b])(
       { name: App.boot.ourTeam, runs: range(inn).map(k => cell((line.our || [])[k])), R: has ? Number(g.our) : '', H: sum(g.bat.map(r => r.H)), E: '-' },
       { name: g.opp, runs: range(inn).map(k => cell((line.opp || [])[k])), R: has ? Number(g.oppScore) : '', H: sum(g.pit.map(r => r.H)), E: '-' }
-    ],
+    ),
     bat: g.bat, pit: g.pit
   };
 }
