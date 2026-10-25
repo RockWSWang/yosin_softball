@@ -70,6 +70,8 @@ function initState(setup) {
     oppIdx: 0, oppCount: setup.oppCount || 10, oppJersey: Object.assign({}, setup.oppJerseys || {}), oppBat: {},
     status: {}, bat: {}, pit: {}, pitOrder: [],
     subsThisHalf: false, needDefArrange: false, halfChanged: false,
+    freshHalf: false, freshMade: false,   // 剛換進來、還沒有任何打席的半局（結束比賽時要退回）
+    x: { our: [], opp: [] }, tb: null,    // x：逐局表要加「X」的局（只是顯示用）；tb：同分時猜拳的結果（W / L）
     log: []
   };
   setup.lineup.forEach((l, i) => {
@@ -90,7 +92,8 @@ function curPitcher(s) { const x = s.slots.find(z => z.pos === 'P'); return x ? 
 
 function startHalf(s, setup) {
   const t = isOffense(s, setup) ? 'our' : 'opp';
-  if (s.runs[t][s.inning - 1] == null) s.runs[t][s.inning - 1] = 0;
+  if (s.runs[t][s.inning - 1] == null) { s.runs[t][s.inning - 1] = 0; return true; }
+  return false;
 }
 function addRuns(s, team, n) {
   const a = s.runs[team];
@@ -142,13 +145,15 @@ function checkHalf(s, setup, warn) {
   if (s.half === 'top') s.half = 'bot';
   else { s.half = 'top'; s.inning++; }
   s.halfChanged = true;
-  startHalf(s, setup);
+  s.freshMade = startHalf(s, setup);
+  s.freshHalf = true;
 }
 
 function applyEvent(s, setup, ev) {
   const warn = [];
   s.halfChanged = false; s.needDefArrange = false;
-  const label = halfLabel(s);
+  if (ev.type === 'PA' || ev.type === 'OPP' || ev.type === 'RUNNER' || ev.type === 'OPPRUN') s.freshHalf = false;
+  let label = halfLabel(s);
   let text = '';
   const N = s.slots.length;
   if (s.over && ev.type !== 'END') warn.push('比賽結束後的紀錄');
@@ -297,10 +302,26 @@ function applyEvent(s, setup, ev) {
     }
 
     case 'END': {
+      // 1) 三出局後剛換進來、還沒開始的半局：不算比賽內容，退回去（逐局表才不會多出一局）
+      const home = setup.weBatFirst ? 'opp' : 'our', vis = setup.weBatFirst ? 'our' : 'opp';
+      if (s.freshHalf) {
+        const t = isOffense(s, setup) ? 'our' : 'opp', k = s.inning - 1;
+        if (s.freshMade && s.runs[t].length === k + 1 && s.runs[t][k] === 0) s.runs[t].pop();
+        if (s.half === 'top') { s.half = 'bot'; s.inning--; s.outs = 3; }   // 例：5 局下打完 → 停在 5 局下，不顯示第 6 局
+        s.freshHalf = false;
+      }
+      // 2) 後攻方領先、下半局沒打完或沒打：該格顯示 X（例：沒打 → X；得 3 分打到一半 → 3X）。只是標記，不影響分數
+      if (s.half === 'bot' && s.outs < 3 && totalRuns(s, home) > totalRuns(s, vis)) {
+        const k = s.inning - 1;
+        if (s.x[home].indexOf(k) < 0) s.x[home].push(k);
+      }
+      // 3) 同分時猜拳的結果
+      s.tb = (totalRuns(s, 'our') === totalRuns(s, 'opp') && (ev.tiebreak === 'W' || ev.tiebreak === 'L')) ? ev.tiebreak : null;
       s.over = true;
+      label = halfLabel(s);
       s.decision = ev.decision || null;
       if (s.decision && s.decision.pid) pit(s, s.decision.pid)[s.decision.type]++;
-      text = '比賽結束' + (s.decision ? `（${DEC_ZH[s.decision.type]}：${pname(setup, s.decision.pid)}）` : '');
+      text = '比賽結束' + (s.tb ? `（猜拳${s.tb === 'W' ? '勝' : '負'}）` : '') + (s.decision ? `（${DEC_ZH[s.decision.type]}：${pname(setup, s.decision.pid)}）` : '');
       break;
     }
 
