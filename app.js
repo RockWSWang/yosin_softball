@@ -298,9 +298,10 @@ function gameSummary(setup, s) {
   const inn = Math.max(setup.innings || 7, s.runs.our.length, s.runs.opp.length);
   const ln = t => range(inn).map(k => s.runs[t][k] == null ? null : s.runs[t][k]);
   return {
-    v: 1, weBatFirst: !!setup.weBatFirst, ourTeam: setup.ourTeam, opp: setup.opp, inn,
+    v: 2, weBatFirst: !!setup.weBatFirst, ourTeam: setup.ourTeam, opp: setup.opp, inn,
     line: { our: ln('our'), opp: ln('opp') }, R: { our: totalRuns(s, 'our'), opp: totalRuns(s, 'opp') },
     H: { our: s.hits.our, opp: s.hits.opp }, E: { our: s.errs.our, opp: s.errs.opp },
+    x: { our: s.x.our.slice(), opp: s.x.opp.slice() }, tb: s.tb || null,
     over: !!s.over, label: s.over ? '' : '進行中（' + halfLabel(s) + '）'
   };
 }
@@ -376,7 +377,7 @@ function mdw(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number);
   return `${m}/${d}（${WEEK[new Date(y, m - 1, d).getDay()]}）`;
 }
-const APP_VERSION = 'v4';
+const APP_VERSION = 'v6';
 function renderHome() {
   const live = App.boot.live || [];
   const up = (App.boot.upcoming || []).filter(x => x.date >= today()).slice(0, 10);
@@ -616,6 +617,13 @@ async function openGame(id) {
   App.edit = null; resetUi();
   go(App.state.over ? 'box' : 'game');
   flush(id);
+  refreshSummary(id);
+}
+/** 已結束的比賽：舊版存的逐局摘要（可能多一局、沒有 X）開啟時更新一次 */
+function refreshSummary(id) {
+  const g = App.game, key = 'sb_sum2_' + id;
+  if (!g || !App.state.over || lsGet(key, 0) || qGet(id).length) return;
+  gs('saveSummaries', [{ gameId: id, summary: gameSummary(g.setup, App.state) }]).then(() => lsSet(key, 1)).catch(() => { });
 }
 
 function askClaim(id) {
@@ -923,16 +931,28 @@ function doUndo() {
 function endGame() {
   const s = App.state, setup = App.game.setup;
   confirmModal('結束比賽', `目前比分 ${setup.ourTeam} ${totalRuns(s, 'our')} : ${totalRuns(s, 'opp')} ${setup.opp}，確定結束？`, '結束比賽', () => {
-    chooseDecision(s, dec => commit({ type: 'END', decision: dec }));
+    askTiebreak(s, tb => chooseDecision(s, dec => commit({ type: 'END', decision: dec, tiebreak: tb || undefined }), tb));
   });
 }
-function chooseDecision(s, cb) {
+/** 同分時，讓使用者選猜拳的結果（勝 / 負）；沒有同分就直接往下 */
+function askTiebreak(s, cb) {
+  if (totalRuns(s, 'our') !== totalRuns(s, 'opp')) return cb(null);
+  openModal({
+    title: '同分：猜拳結果', forced: true,
+    body: `<p>比分 ${totalRuns(s, 'our')} : ${totalRuns(s, 'opp')}，請選擇${esc(App.game.setup.ourTeam)}猜拳的結果</p>`,
+    buttons: [
+      { label: '猜拳勝', cls: 'primary', onClick: () => { App.modals.pop(); renderModal(); cb('W'); } },
+      { label: '猜拳負', cls: 'primary', onClick: () => { App.modals.pop(); renderModal(); cb('L'); } }
+    ]
+  });
+}
+function chooseDecision(s, cb, tb) {
   const our = totalRuns(s, 'our'), opp = totalRuns(s, 'opp');
-  const type = our > opp ? 'W' : our < opp ? 'L' : 'T';
+  const type = our > opp ? 'W' : our < opp ? 'L' : (tb || 'T');
   const pitchers = s.pitOrder.filter(p => p !== '_none');
   openModal({
     title: `選擇${type === 'T' ? '和局' : DEC_ZH[type]}投手`, forced: true,
-    body: () => `<p class="muted small">比分 ${our} : ${opp}${type === 'T' ? '，和局' : ''}</p>` + (pitchers.length
+    body: () => `<p class="muted small">比分 ${our} : ${opp}${our === opp ? (tb ? '，猜拳' + (tb === 'W' ? '勝' : '負') : '，和局') : ''}</p>` + (pitchers.length
       ? `<div class="pgrid">${pitchers.map(pid => `<button class="pbtn" onclick="App._dec(${J(pid)})"><b>#${esc(P(pid).num)}</b>${esc(P(pid).name)}</button>`).join('')}</div>`
       : '<p class="muted">本場沒有投手紀錄</p>'),
     buttons: [{ label: '不記錄', onClick: () => cb(null) }]
@@ -940,13 +960,14 @@ function chooseDecision(s, cb) {
   App._dec = pid => { App.modals.pop(); renderModal(); cb({ type, pid }); };
 }
 function editDecision() {
-  chooseDecision(App.state, dec => {
+  const s = App.state;
+  askTiebreak(s, tb => chooseDecision(s, dec => {
     const evs = App.game.events, i = evs.length - 1;
     if (evs[i] && evs[i].type === 'END') {
-      evs[i] = Object.assign({}, evs[i], { decision: dec });
+      evs[i] = Object.assign({}, evs[i], { decision: dec, tiebreak: tb || undefined });
       resyncAll(); render();
     }
-  });
+  }, tb));
 }
 
 /* ---------------- 賽後修正 ---------------- */
@@ -1019,7 +1040,7 @@ function boxTables(setup, s) {
   const inn = Math.max(setup.innings || 7, s.runs.our.length, s.runs.opp.length);
 
   const line = `<div class="tblwrap"><table class="tbl"><tr><th class="tn">隊伍</th>${range(inn).map(k => `<th>${k + 1}</th>`).join('')}<th>R</th><th>H</th><th>E</th></tr>
-    ${teams.map(([t, n]) => `<tr><td class="tn">${esc(n)}</td>${range(inn).map(k => `<td>${s.runs[t][k] == null ? '' : s.runs[t][k]}</td>`).join('')}
+    ${teams.map(([t, n]) => `<tr><td class="tn">${esc(n)}</td>${range(inn).map(k => `<td>${s.runs[t][k] == null ? '' : s.runs[t][k]}${s.x[t].indexOf(k) >= 0 ? 'X' : ''}</td>`).join('')}
       <td><b>${totalRuns(s, t)}</b></td><td>${s.hits[t]}</td><td>${s.errs[t]}</td></tr>`).join('')}</table></div>`;
 
   // 打擊
@@ -1100,7 +1121,7 @@ function fmtStat(k, v) {
 /* ----- 匯入本次比賽成績 ----- */
 function importPanel(s) {
   const g = App.game, sig = eventsSig(g.events);
-  const dec = s.decision ? `${DEC_ZH[s.decision.type]}：${esc(P(s.decision.pid).name)}` : '未記錄勝敗投手';
+  const dec = (s.tb ? `猜拳${s.tb === 'W' ? '勝' : '負'}　` : '') + (s.decision ? `${DEC_ZH[s.decision.type]}：${esc(P(s.decision.pid).name)}` : '未記錄勝敗投手');
   let act;
   if (g.importStatus === '已匯入' && g.importSig === sig) {
     act = `<span class="tag imp">已匯入年度成績 ✓</span><button class="btn sm" onclick="unimportNow()">取消匯入</button>`;
@@ -1583,10 +1604,10 @@ function teamGame(g, backfill) {
       m = gameSummary(setup, s);
       if (backfill) backfill.push({ gameId: g.gameId, summary: m });
     }
-    const row = t => ({ name: t === 'our' ? m.ourTeam : (m.opp || g.opp), runs: m.line[t], R: m.R[t], H: m.H[t], E: m.E[t] });
+    const row = t => ({ name: t === 'our' ? m.ourTeam : (m.opp || g.opp), runs: m.line[t], xs: (m.x && m.x[t]) || [], R: m.R[t], H: m.H[t], E: m.E[t] });
     return {
       kind: 'game', id: g.gameId, date: g.date, cup: g.cup, opp: g.opp, placing: g.placing,
-      over: m.over, our: m.R.our, oppR: m.R.opp, inn: m.inn, label: m.label,
+      over: m.over, our: m.R.our, oppR: m.R.opp, tb: m.tb || null, inn: m.inn, label: m.label,
       rows: m.weBatFirst ? [row('our'), row('opp')] : [row('opp'), row('our')],
       setup, s
     };
@@ -1605,7 +1626,7 @@ function teamGame(g, backfill) {
     bat: g.bat, pit: g.pit
   };
 }
-function teamResult(g) { return !g.over ? null : g.our > g.oppR ? 'W' : g.our < g.oppR ? 'L' : 'T'; }
+function teamResult(g) { return !g.over ? null : g.our > g.oppR ? 'W' : g.our < g.oppR ? 'L' : (g.tb || 'T'); }
 function teamToggle(id) {
   App.tv.open[id] = !App.tv.open[id];
   render();
@@ -1635,7 +1656,7 @@ function renderTeam() {
   const card = g => {
     const r = teamResult(g), open = !!v.open[g.id];
     const lt = `<table class="tbl lscore"><tr><th class="tn"></th>${range(g.inn).map(k => `<th>${k + 1}</th>`).join('')}<th class="rh">R</th><th>H</th><th>E</th></tr>
-      ${g.rows.map(x => `<tr><td class="tn">${esc(x.name)}</td>${x.runs.map(c => `<td>${c == null ? '' : c}</td>`).join('')}<td class="rh"><b>${x.R}</b></td><td>${x.H}</td><td>${x.E}</td></tr>`).join('')}</table>`;
+      ${g.rows.map(x => `<tr><td class="tn">${esc(x.name)}</td>${x.runs.map((c, k) => `<td>${c == null ? '' : c}${x.xs && x.xs.indexOf(k) >= 0 ? 'X' : ''}</td>`).join('')}<td class="rh"><b>${x.R}</b></td><td>${x.H}</td><td>${x.E}</td></tr>`).join('')}</table>`;
     let detail = '';
     if (open) {
       if (g.kind === 'game' && !g.s) {
@@ -1661,7 +1682,7 @@ function renderTeam() {
       <div class="thead" onclick="teamToggle(${J(g.id)})">
         <div class="tinfo"><b>${esc(g.date.slice(5).replace('-', '/'))}</b> <span>${esc(g.cup)}</span> <span class="muted">vs ${esc(g.opp)}</span>
           ${g.kind === 'manual' ? '<span class="tag manual">手動</span>' : ''}</div>
-        <div class="tbadges">${r ? `<span class="res ${RES[r][1]}">${RES[r][0]}</span>` : `<span class="tag live">${esc(g.label)}</span>`}${placingBadge(g.placing)}<span class="chev">${open ? '▲' : '▼'}</span></div>
+        <div class="tbadges">${r ? `<span class="res ${RES[r][1]}">${g.tb && g.our === g.oppR ? '猜拳' : ''}${RES[r][0]}</span>` : `<span class="tag live">${esc(g.label)}</span>`}${placingBadge(g.placing)}<span class="chev">${open ? '▲' : '▼'}</span></div>
       </div>
       <div class="tblwrap lwrap" onclick="teamToggle(${J(g.id)})">${lt}</div>
       ${open ? `<div class="tdetail">${detail}</div>` : ''}
