@@ -373,3 +373,14 @@ a{color:var(--pri);cursor:pointer;text-decoration:underline}
 .lutbl td.nm,.lutbl th.nm{text-align:left}
 .lutbl tr.cur td{background:#eaf2ff;font-weight:700}
 .lutbl small{color:var(--muted);margin-left:6px;font-weight:400}
+
+/* 手動補登：打數唯讀、目前欄位醒目、標題固定 */
+.mfields input.ab{background:#eceff3;color:#5b6472;border-style:dashed}
+.mfields label.hl span{color:var(--pri);font-weight:700}
+.mrow.cur{border-color:var(--pri);box-shadow:0 0 0 1px var(--pri)}
+.mrow input,.mrow select{scroll-margin-top:120px;scroll-margin-bottom:120px}
+@media (orientation: landscape) and (min-width: 600px), (min-width: 900px) {
+  .msec .mhead{position:sticky;top:var(--tbh,44px);z-index:4;background:var(--bg);padding-top:4px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+  .mhead .mfields span{padding:3px 0;border-radius:4px;transition:background .1s}
+  .mhead .mfields span.hl{background:var(--pri);color:#fff;font-weight:700}
+}
