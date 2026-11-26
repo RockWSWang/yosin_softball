@@ -201,7 +201,7 @@ function modalBtn(i) {
 function confirmModal(title, text, okLabel, fn) {
   openModal({ title, body: `<p>${esc(text)}</p>`, buttons: [{ label: '取消' }, { label: okLabel, cls: 'primary', onClick: fn }] });
 }
-function pickPlayer(title, pids, cb, tagFn) {
+function pickPlayer(title, pids, cb, tagFn, onNew) {
   openModal({
     title,
     body: () => pids.length
@@ -210,7 +210,13 @@ function pickPlayer(title, pids, cb, tagFn) {
         return `<button class="pbtn" onclick="App._pick(${J(pid)})"><b>#${esc(P(pid).num)}</b>${esc(P(pid).name)}${tag ? `<small>${esc(tag)}</small>` : ''}</button>`;
       }).join('')}</div>`
       : '<p class="muted">沒有可選擇的球員</p>',
-    buttons: [{ label: '取消' }]
+    buttons: [{
+      label: '＋ 新增球員', onClick: () => {
+        // 新增完成後，把新球員放進這份清單並重新顯示；onNew 讓呼叫端（例如比賽中）把他加進該場名單
+        addPlayerDialog(p => { if (onNew) onNew(p); pids.push(p.pid); renderModal(); });
+        return false;
+      }
+    }, { label: '取消' }]
   });
   App._pick = pid => { App.modals.pop(); renderModal(); cb(pid); };
 }
@@ -278,9 +284,24 @@ function wakeSync() { (App.game && App.state && !App.state.over) ? wakeOn() : wa
 window.addEventListener('online', () => flushAll());
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { wakeSync(); flushAll(); } });
 function go(v) { if (v !== 'live') stopLive(); App.view = v; render(); window.scrollTo(0, 0); wakeSync(); }
+/* 手動補登：游標所在的欄位，讓上方標題（寬版）與該格名稱（手機直向）變色加粗，並標出目前這一列 */
+function meFocusClear() { document.querySelectorAll('.msec .hl, .mrow.cur').forEach(e => e.classList.remove('hl', 'cur')); }
+document.addEventListener('focusin', e => {
+  const el = e.target, row = el.closest && el.closest('.mrow');
+  meFocusClear();
+  if (!row) return;
+  const lab = el.closest('label'), box = el.closest('.mfields'), sec = el.closest('.msec');
+  if (!lab || !box || !sec) return;
+  const idx = [...box.children].indexOf(lab), heads = sec.querySelectorAll('.mhead .mfields > span');
+  if (heads[idx]) heads[idx].classList.add('hl');
+  lab.classList.add('hl'); row.classList.add('cur');
+});
+document.addEventListener('focusout', () => setTimeout(() => { if (!document.activeElement || !document.activeElement.closest || !document.activeElement.closest('.mrow')) meFocusClear(); }, 0));
 function render() {
   const f = { home: renderHome, setup: renderSetup, oppsetup: renderOppSetup, game: renderGame, box: renderBox, edit: renderEditList, season: renderSeason, player: renderPlayer, opening: renderOpening, manual: renderManualList, manualEdit: renderManualEdit, team: renderTeam, teamTotal: renderTeamTotal, schedule: renderSchedule, live: renderLive }[App.view];
   $('#app').innerHTML = f();
+  const tb = document.querySelector('#app .topbar');   // 固定標題列要貼在上方導覽列下面
+  if (tb) document.documentElement.style.setProperty('--tbh', tb.offsetHeight + 'px');
 }
 async function goHome() {
   App.game = null; App.edit = null;
@@ -377,7 +398,7 @@ function mdw(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number);
   return `${m}/${d}（${WEEK[new Date(y, m - 1, d).getDay()]}）`;
 }
-const APP_VERSION = 'v6';
+const APP_VERSION = 'v7';
 function renderHome() {
   const live = App.boot.live || [];
   const up = (App.boot.upcoming || []).filter(x => x.date >= today()).slice(0, 10);
@@ -530,21 +551,35 @@ function pickReserve() {
     App.draft.reserves.push(pid); render(); pickReserve();
   });
 }
-function addPlayerDialog() {
+function addPlayerDialog(onDone) {
   openModal({
     title: '新增球員',
-    body: `<div class="form"><label>姓名<input id="np-name"></label><label>背號<input id="np-num" inputmode="numeric"></label></div>`,
+    body: `<div class="form"><label>姓名<input id="np-name"></label><label>背號<input id="np-num" inputmode="numeric"></label></div>
+      <p class="small muted">需要有網路；新增後會寫入名冊，之後所有比賽都能選到。</p>`,
     buttons: [{ label: '取消' }, {
       label: '新增', cls: 'primary', onClick: () => {
         const name = $('#np-name').value.trim(), num = $('#np-num').value.trim();
         if (!name) { toast('請輸入姓名'); return false; }
+        const same = App.boot.players.find(p => String(p.name).trim() === name);
+        if (same) { toast(`名冊已有「${name}」（#${same.num}）`); return false; }
+        const dupNum = num && App.boot.players.find(p => String(p.num).trim() === num);
         gs('addPlayer', name, num).then(p => {
-          App.boot.players.push(p); sortPlayers(); toast('已新增 ' + name);
-          if (App.view === 'setup') render();
-        }).catch(e => toast('新增失敗：' + e.message));
+          App.boot.players.push(p); sortPlayers();
+          toast('已新增 ' + name + (dupNum ? `（注意：背號 ${num} 與 ${dupNum.name} 相同）` : ''));
+          if (onDone) onDone(p);
+          else if (App.view === 'setup') render();
+        }).catch(e => toast('新增失敗：' + e.message + '（需要有網路）'));
       }
     }]
   });
+}
+/** 比賽進行中新增的球員：加進這場比賽的名單與預備，才能代打、代跑，也會顯示姓名 */
+function addToGame(p) {
+  const setup = App.game && App.game.setup; if (!setup) return;
+  setup.players = setup.players || {}; setup.reserves = setup.reserves || [];
+  setup.players[p.pid] = { name: p.name, num: p.num };
+  if (!setup.reserves.some(r => (r.pid || r) === p.pid)) setup.reserves.push({ pid: p.pid });
+  lsSet(setupKey(setup.gameId), setup);
 }
 async function startGame() {
   const d = App.draft, errs = validateOurSetup();
@@ -773,7 +808,7 @@ function saveOffense() {
 function doPH() {
   const s = App.state, setup = App.game.setup, slot = s.batIdx;
   pickPlayer(`代打（第 ${slot + 1} 棒 ${P(s.slots[slot].pid).name}）`, availableFor(s, setup, slot),
-    pid => commit({ type: 'SUB', kind: 'PH', slot, inPid: pid }), pid => reentryTag(s, pid));
+    pid => commit({ type: 'SUB', kind: 'PH', slot, inPid: pid }), pid => reentryTag(s, pid), addToGame);
 }
 function reentryTag(s, pid) { const st = s.status[pid]; return st && st.used ? '再上場' : ''; }
 
@@ -794,7 +829,7 @@ function runnerEvent() {
     if (act === 'PR') {
       const q = s.queue.find(x => x.pid === pid);
       pickPlayer(`代跑（第 ${q.slot + 1} 棒 ${P(pid).name}）`, availableFor(s, setup, q.slot),
-        inPid => commit({ type: 'SUB', kind: 'PR', outPid: pid, inPid }), p => reentryTag(s, p));
+        inPid => commit({ type: 'SUB', kind: 'PR', outPid: pid, inPid }), p => reentryTag(s, p), addToGame);
     } else {
       confirmModal('確認', `${P(pid).name} ${act === 'out' ? '出局' : '得分'}？`, '確定', () => commit({ type: 'RUNNER', action: act, pid }));
     }
@@ -880,7 +915,7 @@ function openDefense(note) {
   App._dpos = (i, v) => { draft[i].pos = v; };
   App._dsub = i => {
     const avail = availableFor(s, setup, i).filter(pid => !draft.some((d, k) => k !== i && d.pid === pid));
-    pickPlayer(`第 ${i + 1} 棒 換人`, avail, pid => { draft[i].pid = pid; renderModal(); }, p => reentryTag(s, p));
+    pickPlayer(`第 ${i + 1} 棒 換人`, avail, pid => { draft[i].pid = pid; renderModal(); }, p => reentryTag(s, p), addToGame);
   };
 }
 
@@ -1398,12 +1433,18 @@ const meName = r => (App.bootMap[r.pid] || {}).name || r.name || '?';
 const meNum = r => (App.bootMap[r.pid] || {}).num || '';
 const num = v => Math.max(0, parseInt(v, 10) || 0);
 function meHits(r) { return num(r['1B']) + num(r['2B']) + num(r['3B']) + num(r.HR); }
+/** 打數 = 打席 − 保送 − 高飛犧牲打（只有這兩種不計打數）；打席沒填就留空 */
+function meAB(r) { return String(r.PA).trim() === '' ? '' : Math.max(0, num(r.PA) - num(r.BB) - num(r.SF)); }
+const ME_SUM = ['1B', '2B', '3B', 'HR', 'BB', 'SF', 'AO', 'K', 'GO', 'DP', 'FC', 'ROE'];
+function meSum(r) { return ME_SUM.reduce((a, k) => a + num(r[k]), 0); }
 
 function renderManualEdit() {
   const m = App.me;
   const batRows = m.bat.map((r, i) => `<div class="mrow">
       <div class="mname"><button class="x" onclick="meDel('bat',${i})">✕</button><div><b>${esc(meName(r))}</b> <small class="muted">#${esc(meNum(r))}</small><div class="small muted">安打 <span id="mh${i}">${meHits(r)}</span></div></div></div>
-      <div class="mfields bat">${MAN_BAT.map(([k, z]) => `<label><span>${z}</span><input class="mi" type="number" inputmode="numeric" min="0" value="${esc(r[k])}" oninput="meSet('bat',${i},'${k}',this.value)" onkeydown="meKey(event)"></label>`).join('')}</div>
+      <div class="mfields bat">${MAN_BAT.map(([k, z]) => k === 'AB'
+    ? `<label><span>${z}</span><input id="mab${i}" class="ab" readonly tabindex="-1" title="自動計算：打席 − 保送 − 高飛犧牲打" value="${esc(meAB(r))}"></label>`
+    : `<label><span>${z}</span><input class="mi" type="number" inputmode="numeric" min="0" value="${esc(r[k])}" oninput="meSet('bat',${i},'${k}',this.value)" onkeydown="meKey(event)"></label>`).join('')}</div>
     </div>`).join('');
   const pitRows = m.pit.map((r, i) => `<div class="mrow">
       <div class="mname"><button class="x" onclick="meDel('pit',${i})">✕</button><div><b>${esc(meName(r))}</b> <small class="muted">#${esc(meNum(r))}</small></div></div>
@@ -1433,13 +1474,13 @@ function renderManualEdit() {
     <div class="row2"><span>盃賽成績</span><div class="seg">${[''].concat(PLACINGS).map(p => `<button class="${m.placing === p ? 'on' : ''}" onclick="App.me.placing=${J(p)};render()">${p ? PLACE_IC[p] + ' ' + p : '無'}</button>`).join('')}</div></div>
 
     <div class="sec">打者成績 <small>按 Enter 跳下一格</small></div>
-    <div class="mhead bat"><span></span><div class="mfields bat">${MAN_BAT.map(([, z]) => `<span>${z}</span>`).join('')}</div></div>
-    ${batRows || '<p class="muted small">尚未加入打者</p>'}
+    <div class="msec"><div class="mhead bat"><span></span><div class="mfields bat">${MAN_BAT.map(([, z]) => `<span>${z}</span>`).join('')}</div></div>
+    ${batRows || '<p class="muted small">尚未加入打者</p>'}</div>
     <button class="btn ghost" onclick="meAdd('bat')">＋ 新增打者</button>
 
     <div class="sec">投手成績</div>
-    <div class="mhead pit"><span></span><div class="mfields pit"><span>先發/救援</span>${MAN_PIT.map(([, z]) => `<span>${z}</span>`).join('')}<span>勝敗</span></div></div>
-    ${pitRows || '<p class="muted small">尚未加入投手</p>'}
+    <div class="msec"><div class="mhead pit"><span></span><div class="mfields pit"><span>先發/救援</span>${MAN_PIT.map(([, z]) => `<span>${z}</span>`).join('')}<span>勝敗</span></div></div>
+    ${pitRows || '<p class="muted small">尚未加入投手</p>'}</div>
     <button class="btn ghost" onclick="meAdd('pit')">＋ 新增投手</button>
 
     <div id="meErr" class="errbox"></div>
@@ -1459,6 +1500,7 @@ function meLine(t, k, v) {
 function meSet(kind, i, k, v) {
   App.me[kind][i][k] = v;
   if (kind === 'bat' && ['1B', '2B', '3B', 'HR'].includes(k)) { const el = $('#mh' + i); if (el) el.textContent = meHits(App.me.bat[i]); }
+  if (kind === 'bat' && ['PA', 'BB', 'SF'].includes(k)) { const el = $('#mab' + i); if (el) el.value = meAB(App.me.bat[i]); }
 }
 function meKey(e) {
   if (e.key !== 'Enter') return;
@@ -1487,6 +1529,7 @@ function meSave() {
   const bat = m.bat.map(r => {
     const o = { pid: r.pid, name: meName(r), G: 1 };
     MAN_BAT.forEach(([k]) => o[k] = num(r[k]));
+    o.AB = num(meAB(r));          // 打數一律由公式算出，不採用手動值
     o.H = meHits(r);
     return o;
   });
@@ -1502,9 +1545,9 @@ function meSave() {
   // 只提醒、不阻擋
   const warns = [];
   if ((String(m.our).trim() === '') !== (String(m.oppScore).trim() === '')) warns.push('比分只填了一邊，這場不會計入球隊勝敗');
-  bat.forEach(o => {
-    if (o.AB > o.PA) warns.push(`${o.name}：打數 ${o.AB} 大於打席 ${o.PA}`);
-    else if (o.AB + o.BB + o.SF !== o.PA) warns.push(`${o.name}：打數＋保送＋犧飛＝${o.AB + o.BB + o.SF}，與打席 ${o.PA} 不同`);
+  m.bat.forEach((r, i) => {
+    const o = bat[i], sum = meSum(r);
+    if (sum !== o.PA) warns.push(`${o.name}：各結果加總 ${sum}，與打席 ${o.PA} 不同`);
     if (o.H > o.AB) warns.push(`${o.name}：安打 ${o.H} 大於打數 ${o.AB}`);
   });
   const doSave = () => {
@@ -1634,7 +1677,7 @@ function teamToggle(id) {
   if (App.tv.open[id] && g && g.kind === 'game' && !g.s && !g.loading) {
     g.loading = true;
     const key = 'game:' + id;
-    const use = d => { g.setup = d.setup; g.s = replay(d.setup, d.events); g.loading = false; };
+    const use = d => { augmentSetup(d.setup); g.setup = d.setup; g.s = replay(d.setup, d.events); g.loading = false; };
     const hit = cacheGet(key);
     if (hit) { use(hit); render(); return; }
     gs('getGame', id).then(d => { cacheSet(key, { setup: d.setup, events: d.events }); use(d); if (App.view === 'team') render(); })
@@ -1896,6 +1939,7 @@ async function liveFetch() {
   try {
     const d = await gs('getGame', L.id);
     const changed = !L.data || L.data.events.length !== d.events.length || JSON.stringify(L.data.events) !== JSON.stringify(d.events);
+    augmentSetup(d.setup);
     L.data = { setup: d.setup, events: d.events };
     if (changed) L.s = replay(d.setup, d.events);
     L.at = new Date(); L.err = '';
